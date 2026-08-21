@@ -510,7 +510,10 @@ async function refreshBalances() {
     state.balances = { ergNano: erg, tokens };
   } catch {
     state.balances = null;
-    toast('Could not fetch balances (node unreachable?)', 'warn');
+    // Default node URL is a local node most visitors don't have — the UI already
+    // explains balances need a node; only warn when a custom node was configured.
+    const isDefaultLocal = state.api.nodeUrl === CONFIG.node.defaultMainnet || state.api.nodeUrl === CONFIG.node.defaultTestnet;
+    if (!isDefaultLocal) toast('Could not fetch balances (node unreachable?)', 'warn');
   }
   renderWalletBalances();
   renderBalancesRow();

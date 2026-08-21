@@ -1,0 +1,78 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>UI check</title></head>
+<body style="background:#000;color:#fff;font-family:monospace">
+<pre id="out" style="white-space:pre-wrap">PENDING</pre>
+<iframe id="app" src="../" style="width:1280px;height:900px;border:1px solid #444"></iframe>
+<script type="module">
+const log = [];
+const out = (s) => { log.push(s); document.getElementById('out').textContent = log.join('\n'); try { fetch('http://127.0.0.1:8100/result', { method: 'POST', body: s }).catch(() => {}); } catch {} };
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+const f = document.getElementById('app');
+let doc;
+try { doc = await new Promise((res, rej) => { f.onload = () => res(f.contentDocument); setTimeout(() => rej(new Error('iframe load timeout')), 30000); }); } catch (e) { out('FAIL iframe: ' + e.message); throw e; }
+const $ = (sel) => doc.querySelector(sel);
+const $$ = (sel) => [...doc.querySelectorAll(sel)];
+const visible = (el) => !!(el && !el.hasAttribute('hidden') && f.contentWindow.getComputedStyle(el).display !== 'none');
+const text = (id) => { const e = $(id); return e ? e.textContent.trim() : '(missing)'; };
+const toasts = () => $$('#toasts .toast').map(t => t.textContent.trim()).filter(Boolean);
+const waitFor = async (fn, ms = 20000, step = 250) => {
+  const t0 = Date.now();
+  while (Date.now() - t0 < ms) { try { const v = fn(); if (v) return v; } catch {} await sleep(step); }
+  throw new Error('timeout');
+};
+try {
+  await waitFor(() => text('#stat-height').match(/\d/), 30000, 500);
+  out('1. App booted - chain height: ' + text('#stat-height'));
+  $('#btn-connect').click();
+  await sleep(400);
+  if (!visible($('#modal-wallet'))) throw new Error('wallet modal did not open');
+  out('2. Clicked Connect Wallet - modal opened');
+  $('#wc-create').click();
+  await sleep(400);
+  if (!visible($('#wc-go'))) throw new Error('wc-go (Continue) not available after wc-create');
+  $('#wc-go').click();
+  try {
+    await waitFor(() => $('#btn-connect').classList.contains('connected') && text('#wallet-addr').match(/^9/), 25000, 300);
+    out('3. Created wallet - address: ' + text('#wallet-addr').slice(0, 24) + '...  toasts: ' + (toasts().join(' | ') || 'none'));
+  } catch {
+    out('3. FAIL wallet create - toasts: ' + (toasts().join(' | ') || 'none') + ' | wc-msg: ' + text('#wc-msg') + ' | connect label: ' + text('#connect-label'));
+  }
+  const btnSign = $('#btn-sign-check');
+  if (visible(btnSign)) {
+    const before = toasts().length;
+    btnSign.click();
+    try {
+      await waitFor(() => toasts().length > before, 20000, 300);
+      out('4. Verify key - ' + toasts().slice(-1)[0]);
+    } catch { out('4. FAIL verify key - toasts: ' + (toasts().join(' | ') || 'none')); }
+  } else out('4. SKIP verify key (not visible)');
+  const closeBtn = $$('.modal-backdrop:not([hidden]) [data-close]')[0];
+  if (closeBtn) closeBtn.click();
+  await sleep(400);
+  const inp = $('#amt-from');
+  inp.value = '1';
+  inp.dispatchEvent(new (f.contentWindow.Event)('input', { bubbles: true }));
+  try {
+    await waitFor(() => text('#meta-rate').match(/\d/), 15000, 300);
+    out('5. Quote produced - rate: ' + text('#meta-rate'));
+    const swapBtn = $('#btn-swap');
+    const swapDisabled = swapBtn.classList.contains('disabled');
+    out('   swap button: "' + swapBtn.textContent.trim() + '" disabledClass=' + swapDisabled);
+    if (!swapDisabled) {
+      const actsBefore = text('#activity-list') || '';
+      swapBtn.click();
+      try {
+        await waitFor(() => { const t = text('#activity-list'); return t && t !== actsBefore && t.match(/\d/); }, 15000, 300);
+        out('6. Swap executed - last toast: ' + (toasts().slice(-1)[0] || 'none'));
+      } catch { out('6. FAIL swap - toasts: ' + (toasts().join(' | ') || 'none')); }
+    }
+  } catch { out('5. FAIL quote - toasts: ' + (toasts().join(' | ') || 'none')); }
+  const poolsTab = $$('.tab').find(b => b.textContent.trim() === 'Pools');
+  poolsTab.click(); await sleep(400);
+  out('7. Pools tab visible: ' + visible($('#view-pools')) + ' - pools listed: ' + $$('#pools-body tr').length);
+  out('UI CHECK: DONE');
+} catch (e) {
+  out('UI CHECK: ABORTED - ' + e.message + ' | toasts: ' + (toasts().join(' | ') || 'none'));
+}
+</script>
+</body></html>
