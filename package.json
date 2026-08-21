@@ -1,0 +1,11 @@
+{
+  "name": "eutxo-dex",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "node tests/amm.test.mjs && node --experimental-wasm-modules tests/wallet.verify.mjs && node --experimental-wasm-modules tests/sign.verify.mjs",
+    "test:amm": "node tests/amm.test.mjs",
+    "test:wallet": "node --experimental-wasm-modules tests/wallet.verify.mjs",
+    "test:sign": "node --experimental-wasm-modules tests/sign.verify.mjs"
+  }
+}

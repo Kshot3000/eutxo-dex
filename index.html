@@ -1,0 +1,419 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>EUTXO.DEX — Decentralized Exchange for Ergo</title>
+  <meta name="description" content="EUTXO.DEX — a non-custodial decentralized exchange for the Ergo blockchain. Red-hot swaps, real chain data, no middlemen.">
+  <meta name="theme-color" content="#050507">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <div class="bg" aria-hidden="true">
+    <div class="bg-glow"></div>
+    <div class="bg-grid"></div>
+  </div>
+
+  <header class="topbar">
+    <div class="brand">
+      <img src="assets/logo.svg" alt="" class="brand-logo" width="34" height="34">
+      <span class="brand-name">EUTXO<span class="dot">.</span>DEX</span>
+      <span class="net-badge" id="net-badge" title="Network">MAINNET</span>
+    </div>
+
+    <nav class="tabs" role="tablist" aria-label="Main">
+      <button class="tab active" data-tab="swap" role="tab">Swap</button>
+      <button class="tab" data-tab="pools" role="tab">Pools</button>
+      <button class="tab" data-tab="activity" role="tab">Activity</button>
+    </nav>
+
+    <div class="topbar-right">
+      <div class="height-chip" id="height-chip" title="Live chain height (public Ergo API)">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M2 12h20M5 5l14 14M19 5L5 19" opacity=".55"/><circle cx="12" cy="12" r="4"/></svg>
+        <span id="height-val">…</span>
+      </div>
+      <button class="btn btn-ghost icon-settings" id="btn-settings" title="Settings" aria-label="Settings">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.01a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      </button>
+      <button class="btn btn-wallet" id="btn-connect">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="14" rx="2"/><path d="M16 12h.01M2 10h20"/></svg>
+        <span id="connect-label">Connect Wallet</span>
+      </button>
+    </div>
+  </header>
+
+  <main>
+    <!-- ============ SWAP ============ -->
+    <section id="view-swap" class="view active" role="tabpanel">
+      <div class="hero">
+        <h1>Own your swaps <em>on Ergo</em>.</h1>
+        <p>Permissionless trading of ERG and Ergo tokens. Non-custodial, on the EUTXO model — your keys, your boxes, your swaps.</p>
+      </div>
+
+      <div class="stats-row" id="stats-row">
+        <div class="stat"><label>ERG price</label><strong id="stat-price">—</strong><small id="stat-price-sub">live</small></div>
+        <div class="stat"><label>Chain height</label><strong id="stat-height">—</strong><small>mainnet</small></div>
+        <div class="stat"><label>TVL (est.)</label><strong id="stat-tvl">—</strong><small>pools</small></div>
+        <div class="stat"><label>Active tokens</label><strong id="stat-active">—</strong><small>last ~30 blocks</small></div>
+        <div class="stat"><label>Open pools</label><strong id="stat-pools">—</strong><small>virtual</small></div>
+      </div>
+
+      <div class="swap-wrap">
+        <div class="card swap-card">
+          <div class="card-head">
+            <h2>Swap</h2>
+            <div class="swap-tools">
+              <span class="pill pill-virtual" id="pool-mode-pill" title="Settlement mode">Virtual pool</span>
+              <button class="btn btn-ghost btn-mini" id="btn-slippage" title="Slippage tolerance">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg>
+                <span id="slippage-val">0.5%</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="token-row">
+            <button class="token-pick" id="pick-from" aria-label="From token">
+              <span class="token-icon" id="icon-from"></span>
+              <span class="token-sym" id="sym-from">ERG</span>
+              <span class="chev">▾</span>
+            </button>
+            <input id="amt-from" class="amt" inputmode="decimal" placeholder="0.0" autocomplete="off" spellcheck="false" aria-label="Amount to sell">
+            <div class="row-meta">
+              <span>Balance <b id="bal-from">—</b></span>
+              <button class="link" id="btn-max">MAX</button>
+            </div>
+          </div>
+
+          <div class="swap-mid">
+            <button class="swap-flip" id="btn-flip" title="Flip pair" aria-label="Flip pair">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4"/></svg>
+            </button>
+          </div>
+
+          <div class="token-row">
+            <button class="token-pick" id="pick-to" aria-label="To token">
+              <span class="token-icon" id="icon-to"></span>
+              <span class="token-sym" id="sym-to">LIT</span>
+              <span class="chev">▾</span>
+            </button>
+            <input id="amt-to" class="amt" inputmode="decimal" placeholder="0.0" disabled autocomplete="off" spellcheck="false" aria-label="Amount to receive">
+            <div class="row-meta">
+              <span>Min received <b id="min-to">—</b></span>
+              <span class="fee-tag" id="est-fee">fee 0.30%</span>
+            </div>
+          </div>
+
+          <div class="swap-meta">
+            <div><span>Rate</span><b id="meta-rate">—</b></div>
+            <div><span>Pool fee</span><b id="meta-fee">0.30%</b></div>
+            <div><span>Impact</span><b id="meta-impact">—</b></div>
+          </div>
+
+          <button class="btn btn-primary btn-swap" id="btn-swap">Connect wallet to swap</button>
+          <div class="swap-note" id="swap-note">
+            Quotes use real constant-product AMM math. This release settles on <b>virtual pools</b> (local reserves) — on-chain settlement ships with pool contracts (see README roadmap).
+          </div>
+        </div>
+
+        <aside class="side">
+          <div class="card side-card">
+            <h3>Built for Ergo</h3>
+            <ul class="side-list">
+              <li>Assets live in <b>boxes</b> (EUTXO model), not in a custodial ledger.</li>
+              <li>Non-custodial: real sigma-rust key handling, your keys stay with you.</li>
+              <li>Live chain data from the public Ergo API: height, tokens, block activity.</li>
+            </ul>
+          </div>
+          <div class="card side-card side-warn">
+            <h3>Virtual liquidity notice</h3>
+            <p>Pools are local demo liquidity: the math is real, the settlement is simulated. Connect a full node + wallet to enable real sends; on-chain AMM pools are next on the roadmap.</p>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- ============ POOLS ============ -->
+    <section id="view-pools" class="view" role="tabpanel">
+      <div class="section-head">
+        <h2>Liquidity pools</h2>
+        <div class="section-actions">
+          <button class="btn btn-ghost" id="btn-reset-pools">Reset demo pools</button>
+          <button class="btn btn-primary" id="btn-create-pool">Create pool</button>
+        </div>
+      </div>
+      <div class="card table-card">
+        <table class="tbl">
+          <thead>
+            <tr><th>Pair</th><th>Reserves</th><th>Fee</th><th>Swaps</th><th>TVL (est.)</th><th></th></tr>
+          </thead>
+          <tbody id="pools-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ============ ACTIVITY ============ -->
+    <section id="view-activity" class="view" role="tabpanel">
+      <div class="section-head">
+        <h2>Activity</h2>
+        <div class="section-actions">
+          <button class="btn btn-ghost" id="btn-clear-activity">Clear log</button>
+        </div>
+      </div>
+      <div class="card table-card">
+        <div id="activity-list" class="activity-list"></div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="foot-grid">
+      <div class="foot-brand">
+        <div class="foot-logo">
+          <img src="assets/logo.svg" alt="" width="30" height="30">
+          <span class="brand-name">EUTXO<span class="dot">.</span>DEX</span>
+        </div>
+        <p>A decentralized exchange for the Ergo blockchain. Red-hot on the EUTXO model — no middlemen, no permission.</p>
+        <a class="btn btn-x" href="https://x.com/kshot9000" target="_blank" rel="noopener">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+          Follow <b>@kshot9000</b>
+        </a>
+        <span class="foot-ver" id="foot-ver"></span>
+      </div>
+
+      <div class="foot-col">
+        <h4>Donations</h4>
+        <div class="donation" data-chain="ERG">
+          <span class="don-icon don-icon-img" style="--c:#ff7a1a" aria-hidden="true">
+            <!-- Ergo mark: hexagon + bars (same motif as the in-app token icon) -->
+            <svg viewBox="0 0 32 32"><path d="M16 3.5 27 9.75v12.5L16 28.5 5 22.25V9.75z" fill="none" stroke="#fff" stroke-width="2.2" stroke-linejoin="round"/><path d="M11 11.6h10v2.5H11zm0 4.9h10v2.5H11zm0 4.9h6.4v2.5H11z" fill="#fff"/></svg>
+          </span>
+          <div class="don-body">
+            <span class="don-label">Ergo (ERG)</span>
+            <span class="don-addr" id="don-ergo">9fcM5RWnAjmP4vx5bnW6yohB6H9bLq8sJbaPLHtwZLtQPB32Pvy</span>
+          </div>
+          <div class="don-actions">
+            <button class="link" data-copy="9fcM5RWnAjmP4vx5bnW6yohB6H9bLq8sJbaPLHtwZLtQPB32Pvy">Copy</button>
+            <a class="link" href="https://explorer.ergoplatform.com/addresses/9fcM5RWnAjmP4vx5bnW6yohB6H9bLq8sJbaPLHtwZLtQPB32Pvy" target="_blank" rel="noopener">View</a>
+          </div>
+        </div>
+        <div class="donation" data-chain="BTC">
+          <span class="don-icon" style="--c:#f7931a">₿</span>
+          <div class="don-body">
+            <span class="don-label">Bitcoin (BTC)</span>
+            <span class="don-addr" id="don-btc">3GnR7TWBXAB3pPztBWpNF4LMNEX5yX8vZK</span>
+          </div>
+          <div class="don-actions">
+            <button class="link" data-copy="3GnR7TWBXAB3pPztBWpNF4LMNEX5yX8vZK">Copy</button>
+            <a class="link" href="https://mempool.space/address/3GnR7TWBXAB3pPztBWpNF4LMNEX5yX8vZK" target="_blank" rel="noopener">View</a>
+          </div>
+        </div>
+        <div class="donation" data-chain="ADA">
+          <span class="don-icon don-icon-img" style="--c:#2a5adb" aria-hidden="true">
+            <!-- Cardano mark: center + 6 dots -->
+            <svg viewBox="0 0 32 32"><g fill="#fff"><circle cx="16" cy="16" r="3.4"/><circle cx="16" cy="6.8" r="2.3"/><circle cx="24" cy="11.4" r="2.3"/><circle cx="24" cy="20.6" r="2.3"/><circle cx="16" cy="25.2" r="2.3"/><circle cx="8" cy="20.6" r="2.3"/><circle cx="8" cy="11.4" r="2.3"/></g></svg>
+          </span>
+          <div class="don-body">
+            <span class="don-label">Cardano (ADA)</span>
+            <span class="don-addr" id="don-ada">addr1q8hnl6vl5a6k3rw3n5g3jtte696zcl76kfatzv7gpswa9r0dj7fma6klq55y4ffm7tf0em09udnyhuk4ah92pl5x9jpqjae44v</span>
+          </div>
+          <div class="don-actions">
+            <button class="link" data-copy="addr1q8hnl6vl5a6k3rw3n5g3jtte696zcl76kfatzv7gpswa9r0dj7fma6klq55y4ffm7tf0em09udnyhuk4ah92pl5x9jpqjae44v">Copy</button>
+            <a class="link" href="https://cardanoscan.io/addresses/addr1q8hnl6vl5a6k3rw3n5g3jtte696zcl76kfatzv7gpswa9r0dj7fma6klq55y4ffm7tf0em09udnyhuk4ah92pl5x9jpqjae44v" target="_blank" rel="noopener">View</a>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="eco">
+      <div class="eco-col">
+        <h4>Official</h4>
+        <a href="https://ergoplatform.org" target="_blank" rel="noopener"><b>Ergo Platform</b><small>Official foundation site — research, roadmap &amp; news</small></a>
+        <a href="https://explorer.ergoplatform.com" target="_blank" rel="noopener"><b>Ergo Explorer</b><small>Official block, transaction &amp; address explorer</small></a>
+        <a href="https://docs.ergoplatform.com" target="_blank" rel="noopener"><b>Ergo Docs</b><small>Developer docs — ErgoScript, EIPs &amp; dApp guides</small></a>
+        <a href="https://www.ergoforum.org" target="_blank" rel="noopener"><b>Ergo Forum</b><small>Official community forum</small></a>
+        <a href="https://github.com/ergoplatform" target="_blank" rel="noopener"><b>GitHub</b><small>ergo-node, sigma-rust, EIPs &amp; core code</small></a>
+      </div>
+      <div class="eco-col">
+        <h4>Community &amp; Socials</h4>
+        <a href="https://x.com/Ergo_Platform" target="_blank" rel="noopener"><b>X (Twitter)</b><small>Official announcements &amp; updates</small></a>
+        <a href="https://discord.gg/ergo-platform-668903786361651200" target="_blank" rel="noopener"><b>Discord</b><small>Official community chat</small></a>
+        <a href="https://t.me/Ergo_Chats" target="_blank" rel="noopener"><b>Telegram</b><small>Community chat channel</small></a>
+        <a href="https://reddit.com/r/ergonauts" target="_blank" rel="noopener"><b>Reddit</b><small>r/ergonauts — the Ergo subreddit</small></a>
+        <a href="https://www.youtube.com/c/ErgoPlatform" target="_blank" rel="noopener"><b>YouTube</b><small>Talks, updates &amp; videos</small></a>
+      </div>
+      <div class="eco-col">
+        <h4>Popular Ecosystem</h4>
+        <a href="https://spectrum.fi" target="_blank" rel="noopener"><b>Spectrum</b><small>Open-source cross-chain DEX — the ErgoDEX project</small></a>
+        <a href="https://mewfinance.com" target="_blank" rel="noopener"><b>Mew Finance</b><small>Ergo DEX &amp; token dApp</small></a>
+        <a href="https://48.club" target="_blank" rel="noopener"><b>48 Club</b><small>Ergo's NFT marketplace (also runs the explorer)</small></a>
+        <a href="https://sigmaverse.io" target="_blank" rel="noopener"><b>Sigmaverse</b><small>Portal to the Ergo universe — project directory</small></a>
+        <a href="https://tokenjay.app" target="_blank" rel="noopener"><b>TokenJay</b><small>P2P trading on Ergo</small></a>
+        <a href="https://crystalpool.cc" target="_blank" rel="noopener"><b>Dexy</b><small>Dexy stablecoin from Savonarola Labs</small></a>
+        <a href="https://satergo.com" target="_blank" rel="noopener"><b>Satergo</b><small>Satergo wallet for Ergo</small></a>
+      </div>
+    </div>
+    <div class="foot-legal">
+      <span>EUTXO.DEX v<span id="ver-num">1.0.0</span> · Unofficial community project. Not affiliated with the Ergo Foundation. Not financial advice. Virtual pools: simulated settlement — verify amounts on-chain for real value transfers.</span>
+    </div>
+  </footer>
+
+  <!-- ============ MODALS ============ -->
+  <div class="modal-backdrop" id="modal-wallet" hidden>
+    <div class="modal">
+      <div class="modal-head"><h3>Wallet</h3><button class="icon-btn" data-close>✕</button></div>
+      <div class="modal-body">
+        <div id="wallet-connected" class="wallet-connected" hidden>
+          <div class="addr-card">
+            <span class="dot-ok" id="wallet-net"></span>
+            <div>
+              <div class="addr-main" id="wallet-addr"></div>
+              <div class="addr-sub" id="wallet-sub"></div>
+            </div>
+            <div class="addr-actions">
+              <button class="link" id="btn-copy-addr">Copy</button>
+            </div>
+          </div>
+          <div class="wallet-grid" id="wallet-balances"></div>
+          <div class="wallet-actions">
+            <button class="btn btn-primary" id="btn-open-send">Send ERG / token</button>
+            <button class="btn" id="btn-faucet" hidden>Request testnet faucet</button>
+            <button class="btn" id="btn-sign-check">Verify key</button>
+            <button class="btn btn-danger" id="btn-disconnect">Disconnect</button>
+          </div>
+          <p class="fineprint" id="wallet-storage-note"></p>
+        </div>
+
+        <div id="wallet-connect">
+          <div class="wc-steps">
+            <button class="wc-step" id="wc-create">
+              <h4>Create a new wallet</h4>
+              <p>Generates a fresh 32-byte Ergo seed (CSPRNG) in your browser. Nothing leaves this device.</p>
+            </button>
+            <button class="wc-step" id="wc-import-mnemonic">
+              <h4>Import mnemonic</h4>
+              <p>Paste your 12/24-word Ergo wallet phrase. Same derivation as official Ergo wallets (m/44'/429'/0').</p>
+            </button>
+            <button class="wc-step" id="wc-import-seed">
+              <h4>Import seed key</h4>
+              <p>64 hex characters (32-byte dlog secret) — as stored in Ergo keystore files.</p>
+            </button>
+            <button class="wc-step" id="wc-extension">
+              <h4>Browser extension</h4>
+              <p>Detect the Ergo wallet extension (read-only accounts in this release).</p>
+            </button>
+          </div>
+          <div class="wc-form" id="wc-form" hidden>
+            <label id="wc-form-label" for="wc-input">Mnemonic</label>
+            <textarea id="wc-input" rows="3" spellcheck="false" placeholder="12 or 24 words…"></textarea>
+            <label class="chk"><input type="checkbox" id="wc-remember" checked> <span>Remember on this device (localStorage — never sent anywhere)</span></label>
+            <div class="wc-form-actions">
+              <button class="btn" id="wc-cancel">Cancel</button>
+              <button class="btn btn-primary" id="wc-go">Continue</button>
+            </div>
+          </div>
+          <div class="wc-msg" id="wc-msg"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="modal-send" hidden>
+    <div class="modal">
+      <div class="modal-head"><h3>Send</h3><button class="icon-btn" data-close>✕</button></div>
+      <div class="modal-body">
+        <label class="f-label" for="send-recipient">Recipient (Ergo address)</label>
+        <input id="send-recipient" class="f-input mono" spellcheck="false" placeholder="9…">
+        <div class="f-row">
+          <div class="f-half">
+            <label class="f-label" for="send-token">Asset</label>
+            <div class="token-pick" id="send-token-pick"><span class="token-icon" id="send-token-icon"></span><span class="token-sym" id="send-token-sym">ERG</span><span class="chev">▾</span></div>
+          </div>
+          <div class="f-half">
+            <label class="f-label" for="send-amount">Amount</label>
+            <input id="send-amount" class="f-input" inputmode="decimal" placeholder="0.0">
+          </div>
+        </div>
+        <div class="send-meta" id="send-meta"></div>
+        <p class="fineprint">Sends require a reachable full node (Settings → Node URL). The signed transaction is built with sigma-rust and broadcast to that node.</p>
+        <div class="wc-form-actions">
+          <button class="btn" data-close>Cancel</button>
+          <button class="btn btn-primary" id="btn-send-go">Sign &amp; broadcast</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="modal-create-pool" hidden>
+    <div class="modal">
+      <div class="modal-head"><h3>Create pool</h3><button class="icon-btn" data-close>✕</button></div>
+      <div class="modal-body">
+        <div class="f-row">
+          <div class="f-half">
+            <label class="f-label">Token A</label>
+            <div class="token-pick" id="cp-a-pick"><span class="token-icon" id="cp-a-icon"></span><span class="token-sym" id="cp-a-sym">ERG</span><span class="chev">▾</span></div>
+          </div>
+          <div class="f-half">
+            <label class="f-label">Token B</label>
+            <div class="token-pick" id="cp-b-pick"><span class="token-icon" id="cp-b-icon"></span><span class="token-sym" id="cp-b-sym">LIT</span><span class="chev">▾</span></div>
+          </div>
+        </div>
+        <div class="f-row">
+          <div class="f-half">
+            <label class="f-label" id="cp-a-amt-label">Amount A</label>
+            <input id="cp-a-amt" class="f-input" inputmode="decimal" placeholder="0.0">
+          </div>
+          <div class="f-half">
+            <label class="f-label" id="cp-b-amt-label">Amount B</label>
+            <input id="cp-b-amt" class="f-input" inputmode="decimal" placeholder="0.0">
+          </div>
+        </div>
+        <p class="fineprint">Virtual pool: reserves live locally and drive quotes. In the on-chain release this deploys a sigma-rs pool contract funded from your wallet.</p>
+        <div class="wc-form-actions">
+          <button class="btn" data-close>Cancel</button>
+          <button class="btn btn-primary" id="btn-cp-go">Create</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="modal-settings" hidden>
+    <div class="modal">
+      <div class="modal-head"><h3>Settings</h3><button class="icon-btn" data-close>✕</button></div>
+      <div class="modal-body">
+        <label class="f-label">Network</label>
+        <div class="seg" id="seg-network">
+          <button data-net="mainnet" class="on">Mainnet</button>
+          <button data-net="testnet">Testnet</button>
+        </div>
+        <label class="f-label" for="set-node-url">Full node URL <span class="fineprint-inline">(optional — enables balances, real sends, faucet)</span></label>
+        <input id="set-node-url" class="f-input mono" placeholder="http://localhost:9053" spellcheck="false">
+        <div class="node-status" id="node-status"></div>
+        <div class="wc-form-actions">
+          <button class="btn btn-danger" id="btn-wipe-wallet">Wipe local wallet</button>
+          <span></span>
+          <button class="btn btn-primary" id="btn-settings-save">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="modal-token-select" hidden>
+    <div class="modal modal-wide">
+      <div class="modal-head"><h3 id="ts-title">Select token</h3><button class="icon-btn" data-close>✕</button></div>
+      <div class="modal-body">
+        <input id="ts-search" class="f-input" placeholder="Search tokens…" autocomplete="off">
+        <div class="ts-list" id="ts-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="toasts" class="toasts" aria-live="polite"></div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
