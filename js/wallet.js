@@ -1,9 +1,10 @@
 /* EUTXO.DEX — wallet module.
  *
  * Real Ergo keys via sigma-rust (ergo-lib-wasm), loaded dynamically:
- *   1) local vendor copy  ./vendor/ergo-lib/ergo_lib_wasm.js
- *   2) CDN fallback       https://unpkg.com/ergo-lib-wasm-browser@0.28.0/ergo_lib_wasm.js
- * (WASM module imports need an http(s) origin — use serve.bat, or the CDN copy works.)
+ *   1) local vendor copy  ./vendor/ergo-lib/ergo_lib_wasm_bg.{js,wasm}
+ *   2) CDN fallback       https://unpkg.com/ergo-lib-wasm-browser@0.28.0/ergo_lib_wasm_bg.{js,wasm}
+ * Loaded via fetch + WebAssembly.instantiate (works in every browser;
+ * wasm-ESM imports are rejected by many browser builds).
  *
  * Key formats (both work):
  *   - mnemonic:  12/24 BIP39 words -> sigma-rust master-key derivation:
@@ -15,20 +16,56 @@
  *   Wallet.from_mnemonic(...).sign_transaction(stateCtx, unsignedTx, boxes, dataBoxes)
  */
 
-const CDN_URL = 'https://unpkg.com/ergo-lib-wasm-browser@0.28.0/ergo_lib_wasm.js';
+/* Engine loading — universal across every browser (no wasm-ESM import needed,
+ * which many browsers reject for module scripts). Fetches the .wasm bytes,
+ * instantiates with WebAssembly.instantiate, and wires the glue module's own
+ * exported functions as the import object (the wasm imports them by name).
+ * Candidates: local vendor copy first, then CDN fallback. */
+const CDN_BASE = 'https://unpkg.com/ergo-lib-wasm-browser@0.28.0/';
+const CANDIDATES = [
+  { glue: '../vendor/ergo-lib/ergo_lib_wasm_bg.js', wasm: '../vendor/ergo-lib/ergo_lib_wasm_bg.wasm' },
+  { glue: CDN_BASE + 'ergo_lib_wasm_bg.js', wasm: CDN_BASE + 'ergo_lib_wasm_bg.wasm' },
+];
 
 let ergoLibPromise = null;
+
+async function wasmBytesFor(relOrAbs) {
+  const absUrl = new URL(relOrAbs, import.meta.url);
+  if (absUrl.protocol === 'http:' || absUrl.protocol === 'https:') {
+    const res = await fetch(absUrl.href);
+    if (!res.ok) throw new Error('wasm fetch failed: HTTP ' + res.status);
+    return new Uint8Array(await res.arrayBuffer());
+  }
+  // file: URL (Node test context) — read straight from disk
+  const { fileURLToPath } = await import('node:url');
+  const { readFileSync } = await import('node:fs');
+  return new Uint8Array(readFileSync(fileURLToPath(absUrl)));
+}
+
+async function instantiateCandidate(c) {
+  const glue = await import(/* @vite-ignore */ c.glue);
+  if (typeof glue.__wbg_set_wasm !== 'function') throw new Error('glue module missing __wbg_set_wasm');
+  const bytes = await wasmBytesFor(c.wasm);
+  const mod = new WebAssembly.Module(bytes);
+  const importObject = {};
+  for (const imp of WebAssembly.Module.imports(mod)) {
+    if (typeof glue[imp.name] !== 'function') throw new Error('glue missing imported fn: ' + imp.name);
+    importObject[imp.module] ??= {};
+    importObject[imp.module][imp.name] = glue[imp.name];
+  }
+  const instance = await WebAssembly.instantiate(mod, importObject);
+  glue.__wbg_set_wasm(instance.exports);
+  if (!glue.Wallet || !glue.Mnemonic) throw new Error('module missing exports');
+  return glue;
+}
+
 export function loadErgoLib() {
   if (ergoLibPromise) return ergoLibPromise;
   ergoLibPromise = (async () => {
-    // Note: this file lives in js/, so the local copy is ../vendor/...
-    const candidates = ['../vendor/ergo-lib/ergo_lib_wasm.js', CDN_URL];
     let lastErr = null;
-    for (const url of candidates) {
+    for (const c of CANDIDATES) {
       try {
-        const mod = await import(/* @vite-ignore */ url);
-        if (mod && mod.Wallet && mod.Mnemonic) return mod;
-        lastErr = new Error(`module at ${url} missing exports`);
+        return await instantiateCandidate(c);
       } catch (e) {
         lastErr = e;
       }

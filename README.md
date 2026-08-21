@@ -29,7 +29,7 @@ served with the correct MIME type.
 | AMM quotes — real constant-product math, BigInt-safe, fee + price impact + slippage | ✅ |
 | Pools — create/remove/reset, reserves, TVL, swap log (persisted in localStorage) | ✅ **virtual liquidity** (local settlement) |
 | Wallet — create / import mnemonic (12/24) / import 32-byte seed, real sigma-rust key derivation | ✅ |
-| Signing — `sign_transaction`, `sign_message` via sigma-rust WASM | ✅ (engine loads from local vendor dir or CDN) |
+| Signing — `sign_transaction`, `sign_message` via sigma-rust WASM | ✅ (engine loads via universal fetch+instantiate; local vendor dir or CDN fallback) |
 | Real send (ERG + tokens) | ✅ **requires a reachable full node** (Settings → Node URL), e.g. a node you run |
 | Balances (unspent boxes) | ✅ requires full node |
 | Testnet faucet | ✅ requires a testnet full node |
@@ -54,7 +54,7 @@ eutxo-dex/
 │   └── app.js          state, rendering, events, toasts, modals
 ├── vendor/ergo-lib/    ergo-lib-wasm-browser v0.28.0 (sigma-rust WASM, CC0)
 ├── assets/             logo + favicon (SVG)
-├── tests/              verification suites (AMM math, wallet vectors, signed-tx proofs)
+├── tests/              verification suites (AMM math, wallet vectors, signed-tx proofs, engine self-check page)
 ├── package.json        test scripts (no runtime deps)
 ├── serve.ps1/.bat      zero-dependency Windows static server
 └── README.md

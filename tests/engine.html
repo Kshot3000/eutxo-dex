@@ -1,0 +1,20 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>EUTXO.DEX — engine self-check</title></head>
+<body style="background:#0a0a0c;color:#eee;font-family:monospace;padding:24px">
+<h3 style="color:#ff3b3b">EUTXO.DEX — sigma-rust engine self-check</h3>
+<pre id="out" style="white-space:pre-wrap">PENDING</pre>
+<script type="module">
+const out = (s) => { document.getElementById('out').textContent += s + '\n'; };
+try {
+  const { loadErgoLib } = await import('../js/wallet.js');
+  const E = await loadErgoLib();
+  out('engine loaded: ' + Object.keys(E).length + ' exports');
+  const seed = new Uint8Array(32); for (let i = 0; i < 32; i++) seed[i] = i + 1;
+  const sk = E.SecretKey.dlog_from_bytes(seed);
+  out('address derived: ' + String(sk.get_address()).slice(0, 24) + '...');
+  out('BROWSER ENGINE: WORKS');
+} catch (e) {
+  out('BROWSER ENGINE: FAIL — ' + e.message);
+}
+</script>
+</body></html>
